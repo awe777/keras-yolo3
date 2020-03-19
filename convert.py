@@ -12,14 +12,119 @@ from collections import defaultdict
 
 import numpy as np
 from keras import backend as K
-from keras.layers import (Conv2D, Input, ZeroPadding2D, Add,
-                          UpSampling2D, MaxPooling2D, Concatenate)
+from keras.layers import (Conv2D, Input, ZeroPadding2D, Add, UpSampling2D, MaxPooling2D, Concatenate, Layer)
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras.regularizers import l2
 from keras.utils.vis_utils import plot_model as plot
 
+'''
+    toggle to use rounding algorithms
+'''
+useRounding = False
+
+# problem with model with rounding 
+'''
+def roundingAlgo(x): 
+    # first one that works with model_1 & model_2 
+    # problem - this rounding function is slow: model_2 = 3 hours / epoch
+    # comparison, model_0 = 20 mins / epoch
+    # in addition, off by half with integer inputs (lower than actual value, e.g. floor(2) ≈ 1.5, floor(2.01) ≈ 2)
+    # source: https://en.wikipedia.org/wiki/Floor_and_ceiling_functions#Continuity_and_series_expansions
+    if True:
+        result = x - 0.5
+        for p in range(1, 7):
+            result = result + K.sin(x * p * 2 * math.pi) / (p * math.pi)
+    return result
+# '''
+'''     
+def roundingAlgo(x):
+    # second one that works with model_2 
+    # problem - this rounding function is slower than first working algo: model_2 = 4,2 hours / epoch
+    # comparison, model_0 = 20 mins / epoch
+    # source: self
+    return x - x % 1
+# '''
+# '''
+def roundingAlgo(x): 
+    # simplification of the first algo loop by simplifying the expression for range(1,7)
+    # problem - rounding function is still slow = 2,5 hours / epoch
+    # all non-speed problem of first algo still applies
+    result = x - 0.5
+    resultCos = K.cos(2 * math.pi * x)
+    return result + K.sin(2 * math.pi * x) * (1 + resultCos) * (13 + 2 * resultCos - 18 * K.pow(resultCos, 2) - 32 * K.pow(resultCos, 3) + 80 * K.pow(resultCos, 4)) / 15
+# '''
+'''
+def roundingAlgo(x): 
+    # made to fool the engine to have a gradient
+    return 0 * x + K.round(x)
+# '''
+
+
+# check https://github.com/keras-team/keras/issues/2218
+# check https://github.com/keras-team/keras/issues/2221
+# https://www.tensorflow.org/api_docs/python/tf/custom_gradient
+class RoundClampQ7_12(Layer):
+    def __init__(self, **kwargs):
+        super(RoundClampQ7_12, self).__init__(**kwargs)
+        self.trainable = False
+    def build(self, input_shape):
+        super(RoundClampQ7_12, self).build(input_shape)
+    def call(self, X):
+        return K.clip(roundingAlgo(X * 4096), -524288, 524287) / 4096.0
+    def get_config(self):
+        config = {"name": self.__class__.__name__}
+        base_config = super(RoundClampQ7_12, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+class RoundOverflowQ7_12(Layer):
+    def __init__(self, **kwargs):
+        super(RoundOverflowQ7_12, self).__init__(**kwargs)
+        self.trainable = False
+    def build(self, input_shape):
+        super(RoundOverflowQ7_12, self).build(input_shape)
+    def call(self, X):
+        return (((roundingAlgo(X * 4096) + 524288) % 1048576) - 524288) / 4096.0
+    def get_config(self):
+        config = {"name": self.__class__.__name__}
+        base_config = super(RoundOverflowQ7_12, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+class RoundClampQ3_4(Layer):
+    def __init__(self, **kwargs):
+        super(RoundClampQ3_4, self).__init__(**kwargs)
+        self.trainable = False
+    def build(self, input_shape):
+        super(RoundClampQ3_4, self).build(input_shape)
+    def call(self, X):
+        return K.clip(roundingAlgo(X * 16), -128, 127) / 16.0
+    def get_config(self):
+        config = {"name": self.__class__.__name__}
+        base_config = super(RoundClampQ3_4, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+class RoundOverflowQ3_4(Layer):
+    def __init__(self, **kwargs):
+        super(RoundOverflowQ3_4, self).__init__(**kwargs)
+        self.trainable = False
+    def build(self, input_shape):
+        super(RoundOverflowQ3_4, self).build(input_shape)
+    def call(self, X):
+        return (((roundingAlgo(X * 16) + 128) % 256) - 128) / 16.0
+    def get_config(self):
+        config = {"name": self.__class__.__name__}
+        base_config = super(RoundOverflowQ3_4, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+def rounding(currentLayer):
+    if useRounding:
+        return currentLayer
+    else:
+        '''
+            pick one
+        '''
+        roundingFunction = RoundClampQ7_12()
+        # roundingFunction = RoundClampQ3_4()
+        # roundingFunction = RoundOverflowQ7_12()
+        # roundingFunction = RoundOverflowQ3_4()
+        return roundingFunction(currentLayer)
 
 parser = argparse.ArgumentParser(description='Darknet To Keras Converter.')
 parser.add_argument('config_path', help='Path to Darknet cfg file.')
@@ -176,14 +281,14 @@ def _main(args):
 
             if batch_normalize:
                 conv_layer = (BatchNormalization(
-                    weights=bn_weight_list))(conv_layer)
-            prev_layer = conv_layer
+                    weights=bn_weight_list))(rounding(conv_layer))
+            prev_layer = rounding(conv_layer)
 
             if activation == 'linear':
                 all_layers.append(prev_layer)
             elif activation == 'leaky':
                 act_layer = LeakyReLU(alpha=0.1)(prev_layer)
-                prev_layer = act_layer
+                prev_layer = rounding(act_layer)
                 all_layers.append(act_layer)
 
         elif section.startswith('route'):
