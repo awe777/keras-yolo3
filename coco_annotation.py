@@ -11,7 +11,7 @@ data = json.load(f)
 annotations = data['annotations']
 for ant in annotations:
     id = ant['image_id']
-    name = 'mscoco2017/train2017/%012d.jpg' % id
+    name = '../CNN-VLSI/train2017/%012d.jpg' % id
     cat = ant['category_id']
 
     if cat >= 1 and cat <= 11:
