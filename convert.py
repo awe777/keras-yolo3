@@ -9,7 +9,7 @@ import configparser
 import io
 import os
 from collections import defaultdict
-
+import math
 import numpy as np
 from keras import backend as K
 from keras.layers import (Conv2D, Input, ZeroPadding2D, Add, UpSampling2D, MaxPooling2D, Concatenate, Layer)
@@ -18,12 +18,11 @@ from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras.regularizers import l2
 from keras.utils.vis_utils import plot_model as plot
-
+useRounding = False
 '''
     toggle to use rounding algorithms
 '''
-useRounding = False
-
+useRounding = True
 # problem with model with rounding 
 '''
 def roundingAlgo(x): 
@@ -114,17 +113,18 @@ class RoundOverflowQ3_4(Layer):
         base_config = super(RoundOverflowQ3_4, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 def rounding(currentLayer):
-    if useRounding:
+    roundingFunction = None
+    if not useRounding:
         return currentLayer
     else:
         '''
             pick one
         '''
-        roundingFunction = RoundClampQ7_12()
+        # roundingFunction = RoundClampQ7_12()
         # roundingFunction = RoundClampQ3_4()
         # roundingFunction = RoundOverflowQ7_12()
         # roundingFunction = RoundOverflowQ3_4()
-        return roundingFunction(currentLayer)
+        return currentLayer if roundingFunction is None else roundingFunction(currentLayer)
 
 parser = argparse.ArgumentParser(description='Darknet To Keras Converter.')
 parser.add_argument('config_path', help='Path to Darknet cfg file.')
