@@ -4,7 +4,7 @@ from collections import defaultdict
 name_box_id = defaultdict(list)
 id_name = dict()
 f = open(
-    "mscoco2017/annotations/instances_train2017.json",
+    "..\CNN-VLSI\annotations\instances_train2017.json",
     encoding='utf-8')
 data = json.load(f)
 
