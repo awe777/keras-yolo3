@@ -15,7 +15,7 @@ from yolo3.utils import get_random_data
 
 def _main():
     for files in os.scandir(path="./model_data/"):
-        if files.is_file and files.name.endswith("h5"):
+        if files.is_file and files.name.endswith(".h5"):
             print("training", files.name)
             mainProgram("./model_data/" + files.name)
 
