@@ -68,7 +68,8 @@ def mainProgram(set_weight_path):
                 validation_steps=max(1, num_val//batch_size),
                 epochs=50,
                 initial_epoch=0,
-                callbacks=[logging, checkpoint])
+                # callbacks=[logging, checkpoint]
+        )
         model.save_weights(log_dir + set_weight_path[len("./model_data/"):-3] + '_stage_1.h5')
 
     # Unfreeze and continue training, to fine-tune.
@@ -87,7 +88,8 @@ def mainProgram(set_weight_path):
             validation_steps=max(1, num_val//batch_size),
             epochs=100,
             initial_epoch=50,
-            callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+            # callbacks=[logging, checkpoint, reduce_lr, early_stopping]
+        )
         model.save_weights(log_dir + set_weight_path[len("./model_data/"):-3] + '_final.h5')
 
     # Further training if needed.
