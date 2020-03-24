@@ -31,12 +31,16 @@ def mainProgram(set_weight_path):
     input_shape = (416,416) # multiple of 32, hw
 
     is_tiny_version = len(anchors)==6 # default setting
+    '''
+        freeze_body = 1 -> freeze Darknet body
+        freeze_body = 2 -> freeze all but the last 3 layers
+    '''
     if is_tiny_version:
         model = create_tiny_model(input_shape, anchors, num_classes,
-            freeze_body=0, weights_path=set_weight_path)
+            freeze_body=1, weights_path=set_weight_path)
     else:
         model = create_model(input_shape, anchors, num_classes,
-            freeze_body=0, weights_path=set_weight_path) # make sure you know what you freeze
+            freeze_body=1, weights_path=set_weight_path) # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
@@ -58,9 +62,9 @@ def mainProgram(set_weight_path):
     if True:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
-            'yolo_loss': lambda y_true, y_pred: y_pred})
+            'yolo_loss': lambda y_true, y_pred: y_pred}, metrics=['accuracy'])
 
-        batch_size = 8
+        batch_size = 12
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
                 steps_per_epoch=max(1, num_train//batch_size),
@@ -74,10 +78,10 @@ def mainProgram(set_weight_path):
 
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
-    if True:
+    if False:
         for i in range(len(model.layers)):
             model.layers[i].trainable = True
-        model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
+        model.compile(optimizer=Adam(lr=1e-4), loss={'yolo_loss': lambda y_true, y_pred: y_pred}, metrics=['accuracy']) # recompile to apply the change
         print('Unfreeze all of the layers.')
 
         batch_size = 32 # note that more GPU memory is required after unfreezing the body

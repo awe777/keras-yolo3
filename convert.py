@@ -114,17 +114,17 @@ class RoundOverflowQ3_4(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 def rounding(currentLayer):
     roundingFunction = None
-    if not useRounding:
+    '''
+        pick one
+    '''
+    # roundingFunction = RoundClampQ7_12()
+    # roundingFunction = RoundClampQ3_4()
+    # roundingFunction = RoundOverflowQ7_12()
+    # roundingFunction = RoundOverflowQ3_4()
+    if not useRounding or roundingFunction is None:
         return currentLayer
     else:
-        '''
-            pick one
-        '''
-        # roundingFunction = RoundClampQ7_12()
-        # roundingFunction = RoundClampQ3_4()
-        # roundingFunction = RoundOverflowQ7_12()
-        # roundingFunction = RoundOverflowQ3_4()
-        return currentLayer if roundingFunction is None else roundingFunction(currentLayer)
+        return roundingFunction(currentLayer)
 
 parser = argparse.ArgumentParser(description='Darknet To Keras Converter.')
 parser.add_argument('config_path', help='Path to Darknet cfg file.')
