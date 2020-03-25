@@ -129,7 +129,7 @@ def DarknetConv2D_BN_Leaky(*args, **kwargs):
     # useRounding = True
     no_bias_kwargs = {'use_bias': False}
     no_bias_kwargs.update(kwargs)
-    if(useRounding):
+    if(not useRounding):
         result = compose(
             DarknetConv2D(*args, **no_bias_kwargs),
             BatchNormalization(),
