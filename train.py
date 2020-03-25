@@ -28,8 +28,8 @@ def mainProgram(set_weight_path):
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
     
-    if not os.path.exists("./logs/000/"):
-        os.makedirs("./logs/000/")
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
         
     input_shape = (416,416) # multiple of 32, hw
 
@@ -193,7 +193,7 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
         for b in range(batch_size):
             if i==0:
                 np.random.shuffle(annotation_lines)
-            image, box = get_random_data(annotation_lines[i], input_shape, random=True)
+            image, box = get_random_data(annotation_lines[i], input_shape, random=False)
             image_data.append(image)
             box_data.append(box)
             i = (i+1) % n
