@@ -4,6 +4,7 @@ Class definition of YOLO_v3 style detection model on image and video
 """
 
 import colorsys
+import tensorflow as tf
 import os
 from timeit import default_timer as timer
 
@@ -21,7 +22,7 @@ from keras.utils import multi_gpu_model
 class YOLO(object):
     _defaults = {
         "model_path": 'model_data/yolo.h5',
-        "anchors_path": 'model_data/yolo_anchors.txt',
+        "anchors_path": 'model_data/tiny_yolo_anchors.txt',
         "classes_path": 'model_data/coco_classes.txt',
         "score" : 0.3,
         "iou" : 0.45,
@@ -41,7 +42,7 @@ class YOLO(object):
         self.__dict__.update(kwargs) # and update with user overrides
         self.class_names = self._get_class()
         self.anchors = self._get_anchors()
-        self.sess = K.get_session()
+        self.sess = tf.compat.v1.Session()
         self.boxes, self.scores, self.classes = self.generate()
 
     def _get_class(self):
@@ -59,7 +60,7 @@ class YOLO(object):
         return np.array(anchors).reshape(-1, 2)
 
     def generate(self):
-        model_path = os.path.expanduser(self.model_path)
+        model_path = os.path.expanduser(self.model)
         assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
 
         # Load model, or construct model and load weights.
@@ -73,9 +74,9 @@ class YOLO(object):
                 if is_tiny_version else yolo_body(Input(shape=(None,None,3)), num_anchors//3, num_classes)
             self.yolo_model.load_weights(self.model_path) # make sure model, anchors and classes match
         else:
-            assert self.yolo_model.layers[-1].output_shape[-1] == \
-                num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
-                'Mismatch between model and given anchor and class sizes'
+            print(self.yolo_model.layers[-1].output_shape[-1])
+            print(num_anchors/len(self.yolo_model.output) * (num_classes + 5))
+            assert self.yolo_model.layers[-1].output_shape[-1] == num_anchors/len(self.yolo_model.output) * (num_classes + 5), 'Mismatch between model and given anchor and class sizes'
 
         print('{} model, anchors, and classes loaded.'.format(model_path))
 
