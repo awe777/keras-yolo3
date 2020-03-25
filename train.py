@@ -21,13 +21,16 @@ def _main():
 
 def mainProgram(set_weight_path):
     annotation_path = 'train.txt'
-    log_dir = 'logs/000/'
+    log_dir = './logs/000/'
     classes_path = 'model_data/coco_classes.txt'
     anchors_path = 'model_data/tiny_yolo_anchors.txt'
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
-
+    
+    if not os.path.exists("./logs/000/"):
+        os.makedirs("./logs/000/")
+        
     input_shape = (416,416) # multiple of 32, hw
 
     is_tiny_version = len(anchors)==6 # default setting
