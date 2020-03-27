@@ -3,6 +3,7 @@
 *.weights
 *.h5
 train.txt
+val.txt
 logs/
 *_test.py
 
