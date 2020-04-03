@@ -120,7 +120,7 @@ def rounding(currentLayer):
     # roundingFunction = RoundClampQ7_12()
     # roundingFunction = RoundClampQ3_4()
     # roundingFunction = RoundOverflowQ7_12()
-    # roundingFunction = RoundOverflowQ3_4()
+    roundingFunction = RoundOverflowQ3_4()
     if not useRounding or roundingFunction is None:
         return currentLayer
     else:
@@ -342,7 +342,8 @@ def _main(args):
     # Create and save model.
     if len(out_index)==0: out_index.append(len(all_layers)-1)
     model = Model(inputs=input_layer, outputs=[all_layers[i] for i in out_index])
-    print(model.summary())
+    with open(output_path[:-2] + "txt", "wt") as summaryText:
+        model.summary(print_fn=lambda x: summaryText.write(x + "\n"), line_length=200)
     if args.weights_only:
         model.save_weights('{}'.format(output_path))
         print('Saved Keras weights to {}'.format(output_path))

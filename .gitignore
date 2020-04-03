@@ -4,6 +4,7 @@
 *.h5
 train.txt
 val.txt
+yolov3*.txt
 logs/
 *_test.py
 
