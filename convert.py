@@ -198,6 +198,39 @@ def _main(args):
                          ) if 'net_0' in cfg_parser.sections() else 5e-4
     count = 0
     out_index = []
+    model_name = "model_4"
+    convolutional_counter = 0
+    batchnorm_counter = 0
+    conv_index=[
+        "layer0_branch",
+        "layer1_branch",
+        "layer2_branch",
+        "layer3_branch",
+        "layer4_branch",
+        "layer5_branch0",
+        "layer6_branch0",
+        "layer7_branch0",
+        "layer8_branch01",
+        None,
+        "layer8_branch00",
+        "layer9_branch1",
+        None
+    ]
+    bn_index=[
+        "layer0_branch",
+        "layer1_branch",
+        "layer2_branch",
+        "layer3_branch",
+        "layer4_branch",
+        "layer5_branch0",
+        "layer6_branch0",
+        "layer7_branch0",
+        "layer8_branch01",
+        "layer8_branch00",
+        "layer9_branch1",
+        None,
+        None
+    ]
     for section in cfg_parser.sections():
         print('Parsing section {}'.format(section))
         if section.startswith('convolutional'):
@@ -270,18 +303,25 @@ def _main(args):
             if stride>1:
                 # Darknet uses left and top padding instead of 'same' mode
                 prev_layer = ZeroPadding2D(((1,0),(1,0)))(prev_layer)
+            conv_name = None
+            if conv_index[convolutional_counter] is not None:
+                conv_name = "Conv2D_" + model_name + "_" + conv_index[convolutional_counter]
             conv_layer = (Conv2D(
                 filters, (size, size),
                 strides=(stride, stride),
                 kernel_regularizer=l2(weight_decay),
                 use_bias=not batch_normalize,
                 weights=conv_weights,
+                name=conv_name,
                 activation=act_fn,
                 padding=padding))(prev_layer)
 
+            bn_name = None
+            if bn_index[batchnorm_counter] is not None:
+                bn_name = "BatchNorm_" + model_name + "_" + bn_index[batchnorm_counter]
             if batch_normalize:
-                conv_layer = (BatchNormalization(
-                    weights=bn_weight_list))(rounding(conv_layer))
+                conv_layer = (BatchNormalization(weights=bn_weight_list, name=bn_name))(rounding(conv_layer))
+                batchnorm_counter = batchnorm_counter + 1
             prev_layer = rounding(conv_layer)
 
             if activation == 'linear':
@@ -290,6 +330,7 @@ def _main(args):
                 act_layer = LeakyReLU(alpha=0.1)(prev_layer)
                 prev_layer = rounding(act_layer)
                 all_layers.append(act_layer)
+            convolutional_counter = convolutional_counter + 1
 
         elif section.startswith('route'):
             ids = [int(i) for i in cfg_parser[section]['layers'].split(',')]
