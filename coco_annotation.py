@@ -46,7 +46,7 @@ for key in name_box_id.keys():
         y_max = y_min + int(info[0][3])
 
         box_info = " %d,%d,%d,%d,%d" % (
-            x_min, y_min, x_max, y_max, int(info[1]))
+            x_min, y_min, x_max, y_max, int(info[1])) # left, bottom, right, top
         f.write(box_info)
     f.write('\n')
 f.close()
